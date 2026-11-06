@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VideoStream</title>
+    <style>
+      :root { color-scheme: dark; font-family: Arial, sans-serif; background: #101116; color: #f5f7fb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; }
+      a { color: inherit; text-decoration: none; }
+      .header { min-height: 76px; padding: 14px 5%; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #181a21; border-bottom: 1px solid #2a2e39; }
+      .brand { color: #ff5252; font-size: 26px; font-weight: 800; }
+      .search-bar { display: flex; gap: 8px; width: min(500px, 55vw); }
+      .search-bar input { width: 100%; padding: 11px 14px; border: 1px solid #3a4150; border-radius: 8px; background: #1b1e26; color: white; }
+      .search-bar button { border: 0; border-radius: 8px; padding: 10px 14px; background: #ff5252; cursor: pointer; }
+      main { max-width: 1400px; margin: auto; padding: 30px 5%; }
+      .video-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+      .video-card { overflow: hidden; background: #1b1e26; border-radius: 12px; transition: transform .2s ease, box-shadow .2s ease; }
+      .video-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px #0006; }
+      .video-card img { width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: cover; background: #272c37; }
+      .card-body { padding: 14px; }
+      .card-body h2 { margin: 0; font-size: 1.05rem; }
+      .player { width: 100%; max-height: 70vh; background: black; border-radius: 12px; }
+      .video-info { margin-top: 20px; padding: 20px; border-radius: 12px; background: #1b1e26; }
+      .back-link { color: #c2c8d3; }
+      .status { color: #b7bfcc; }
+      [hidden] { display: none !important; }
+      @media (max-width: 600px) { .header { flex-wrap: wrap; } .search-bar { width: 100%; } }
+      @media (min-width: 650px) { .video-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (min-width: 1000px) { .video-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <a class="brand" href="index.html">VideoStream</a>
+      <div class="search-bar">
+        <input type="text" placeholder="Buscar videos..." aria-label="Buscar videos" />
+        <button type="button">🔍</button>
+      </div>
+      <a id="back-link" class="back-link" href="index.html" hidden>← Galería</a>
+    </header>
+
+    <main>
+      <section id="gallery-view">
+        <h1>Explora videos</h1>
+        <p id="gallery-status" class="status">Cargando videos...</p>
+        <div id="video-gallery" class="video-grid"></div>
+      </section>
+
+      <section id="player-view" hidden>
+        <p id="player-status" class="status"></p>
+        <video id="video-player" class="player" controls></video>
+        <section class="video-info">
+          <h1 id="video-title"></h1>
+          <p id="video-description"></p>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const API_URL = "http://127.0.0.1:8000";
+      const videoId = new URLSearchParams(window.location.search).get("id");
+      const gallery = document.getElementById("video-gallery");
+      const galleryStatus = document.getElementById("gallery-status");
+
+      function createVideoCard(video) {
+        const article = document.createElement("article");
+        article.className = "video-card";
+        const link = document.createElement("a");
+        link.href = `index.html?id=${video.id}`;
+        const image = document.createElement("img");
+        image.src = video.thumbnail;
+        image.alt = `Miniatura de ${video.title}`;
+        image.loading = "lazy";
+        const body = document.createElement("div");
+        body.className = "card-body";
+        const title = document.createElement("h2");
+        title.textContent = video.title;
+        body.append(title);
+        link.append(image, body);
+        article.append(link);
+        return article;
+      }
+
+      async function loadGallery() {
+        try {
+          const response = await fetch(`${API_URL}/videos`);
+          if (!response.ok) throw new Error("No se pudo cargar la galería");
+          const videos = await response.json();
+          galleryStatus.textContent = videos.length ? "" : "No hay videos disponibles.";
+          videos.forEach((video) => gallery.append(createVideoCard(video)));
+        } catch (error) {
+          galleryStatus.textContent = "No se pudieron cargar los videos.";
+          console.error(error);
+        }
+      }
+
+      async function loadPlayer() {
+        const status = document.getElementById("player-status");
+        try {
+          const response = await fetch(`${API_URL}/videos/${videoId}`);
+          if (!response.ok) throw new Error("Video no encontrado");
+          const video = await response.json();
+          document.getElementById("video-player").src = video.source;
+          document.getElementById("video-player").poster = video.thumbnail;
+          document.getElementById("video-title").textContent = video.title;
+          document.getElementById("video-description").textContent = video.description;
+          document.title = `${video.title} | VideoStream`;
+        } catch (error) {
+          status.textContent = "No se pudo cargar el video.";
+          console.error(error);
+        }
+      }
+
+      if (videoId) {
+        document.getElementById("gallery-view").hidden = true;
+        document.getElementById("player-view").hidden = false;
+        document.getElementById("back-link").hidden = false;
+        loadPlayer();
+      } else {
+        loadGallery();
+      }
+    </script>
+  </body>
+</html>
