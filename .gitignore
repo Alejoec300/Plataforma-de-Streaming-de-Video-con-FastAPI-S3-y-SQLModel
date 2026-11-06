@@ -9,5 +9,3 @@ __pycache__/
 # Archivos locales generados por la aplicación
 uploads/
 
-# Base de datos local: se crea automáticamente al iniciar la API
-db.sqlite3
